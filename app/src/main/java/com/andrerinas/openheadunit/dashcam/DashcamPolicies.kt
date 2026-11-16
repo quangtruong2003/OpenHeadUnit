@@ -66,6 +66,22 @@ class DashcamSessionPolicy {
     }
 }
 
+object DashcamSegmentPolicy {
+    val ALLOWED_MINUTES = listOf(1, 3, 5)
+    const val DEFAULT_MINUTES = 3
+    const val UNKNOWN_GAP_MS = -1L
+
+    fun normalizeMinutes(minutes: Int): Int = minutes.takeIf { it in ALLOWED_MINUTES } ?: DEFAULT_MINUTES
+
+    fun durationMs(minutes: Int): Long = normalizeMinutes(minutes).toLong() * 60_000L
+
+    fun shouldRotate(recordedDurationNanos: Long, minutes: Int): Boolean =
+        recordedDurationNanos >= durationMs(minutes) * 1_000_000L
+
+    fun gapBeforeMs(previousEndMs: Long?, segmentStartMs: Long): Long =
+        previousEndMs?.let { (segmentStartMs - it).coerceAtLeast(0L) } ?: 0L
+}
+
 enum class DashcamRetentionMode { AGE, SMART, COMBINED }
 
 data class DashcamClip(

@@ -8,6 +8,7 @@ data class DashcamServiceConfig(
     val cameraId: String,
     val quality: String,
     val fps: Int,
+    val segmentMinutes: Int,
     val orientation: String,
     val audio: Boolean,
     val retentionMode: DashcamRetentionMode,
@@ -30,6 +31,9 @@ data class DashcamServiceConfig(
                 cameraId = intent.getStringExtra(DashcamActions.EXTRA_CAMERA_ID).orEmpty(),
                 quality = quality.takeIf { it in setOf("SD", "HD", "FHD", "UHD") } ?: "HD",
                 fps = intent.getIntExtra(DashcamActions.EXTRA_FPS, 30).takeIf { it == 30 || it == 60 } ?: 30,
+                segmentMinutes = DashcamSegmentPolicy.normalizeMinutes(
+                    intent.getIntExtra(DashcamActions.EXTRA_SEGMENT_MINUTES, DashcamSettingsKeys.DEFAULT_SEGMENT_MINUTES)
+                ),
                 orientation = intent.getStringExtra(DashcamActions.EXTRA_ORIENTATION).orEmpty().takeIf { it in setOf("auto", "portrait", "landscape") } ?: "auto",
                 audio = intent.getBooleanExtra(DashcamActions.EXTRA_AUDIO, false),
                 retentionMode = mode,

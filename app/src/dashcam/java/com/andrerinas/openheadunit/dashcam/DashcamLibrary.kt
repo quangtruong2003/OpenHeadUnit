@@ -330,22 +330,11 @@ object DashcamLibrary {
             directory.listFiles { file -> file.isFile && file.extension.equals("mp4", ignoreCase = true) }
                 ?.forEach { video ->
                     val metadata = sidecar(video)
-                    if (metadata.exists()) {
-                        val record = readClip(metadata)
-                        if (record == null || !video.exists()) {
-                            metadata.delete()
-                            if (video.exists() && !isLive) video.delete()
-                        } else {
-                            val recoveredRecord = if (record.exporting && !clipExportIsLocked(record)) {
-                                record.copy(exported = true, exporting = false)
-                            } else record
-                            val galleryUri = publishToGallery(context, video)
-                            val bytes = video.length()
-                            if (galleryUri != recoveredRecord.galleryUri || bytes != recoveredRecord.bytes) {
-                                writeClip(recoveredRecord.copy(galleryUri = galleryUri, bytes = bytes))
-                            }
-                        }
-                    } else if (!isLive) {
+                    val record = if (metadata.exists()) readClip(metadata)?.takeIf {
+                        it.file.canonicalFile == video.canonicalFile
+                    } else null
+                    if (record == null && !isLive) {
+                        metadata.delete()
                         val info = videoInfo(video)
                         if (info == null) {
                             video.delete()
@@ -369,7 +358,7 @@ object DashcamLibrary {
                                 width = info.width,
                                 height = info.height,
                                 targetFps = 30,
-                                gapBeforeMs = 0,
+                                gapBeforeMs = DashcamSegmentPolicy.UNKNOWN_GAP_MS,
                                 locked = eventIds.isNotEmpty(),
                                 exported = false,
                                 exporting = false,
@@ -381,6 +370,15 @@ object DashcamLibrary {
                                 galleryUri = galleryUri
                             )
                             writeClip(record)
+                        }
+                    } else if (record != null) {
+                        val recoveredRecord = if (record.exporting && !clipExportIsLocked(record)) {
+                            record.copy(exported = true, exporting = false)
+                        } else record
+                        val galleryUri = publishToGallery(context, video)
+                        val bytes = video.length()
+                        if (galleryUri != recoveredRecord.galleryUri || bytes != recoveredRecord.bytes) {
+                            writeClip(recoveredRecord.copy(galleryUri = galleryUri, bytes = bytes))
                         }
                     }
                 }

@@ -57,6 +57,9 @@ class DashcamService : LifecycleService() {
     private var recordingSessionId: String? = null
     private var currentFile: File? = null
     private var recordingStartedAtMs = 0L
+    private var lastSegmentEndMs: Long? = null
+    private var currentSegmentGapBeforeMs = 0L
+    private var segmentRotationSessionId: String? = null
     private var recordingTargetFps = 0
     private var recordingWidth = 0
     private var recordingHeight = 0
@@ -138,8 +141,12 @@ class DashcamService : LifecycleService() {
             failSession(sessionId, getString(R.string.dashcam_camera_unavailable))
             return
         }
+        lastSegmentEndMs = null
+        currentSegmentGapBeforeMs = 0L
+        segmentRotationSessionId = null
         publishStatus("starting", getString(R.string.dashcam_status_waiting))
         enqueueLibrary {
+            DashcamLibrary.listClips(this, sessionId)
             val retention = DashcamLibrary.enforceRetention(
                 this, config.retentionMode, config.retentionDays, config.maxBytes, config.reserveBytes
             )
@@ -251,9 +258,11 @@ class DashcamService : LifecycleService() {
             failSession(sessionId, getString(R.string.dashcam_camera_unavailable))
             return
         }
-        recordingStartedAtMs = System.currentTimeMillis()
+        val requestedAtMs = System.currentTimeMillis()
+        recordingStartedAtMs = requestedAtMs
+        currentSegmentGapBeforeMs = 0L
         videoOverlay?.startLocationUpdates()
-        val file = DashcamLibrary.newRecordingFile(this, sessionId, recordingStartedAtMs)
+        val file = DashcamLibrary.newRecordingFile(this, sessionId, requestedAtMs)
         val output = FileOutputOptions.Builder(file).build()
         val audioAllowed = audioAllowed(config)
         if (config.audio && !audioAllowed) publishStatus("recording", getString(R.string.dashcam_mic_unavailable))
@@ -288,14 +297,33 @@ class DashcamService : LifecycleService() {
         when (event) {
             is VideoRecordEvent.Start -> {
                 if (sessionPolicy.isRecording(sessionId)) {
+                    recordingStartedAtMs = System.currentTimeMillis()
+                    currentSegmentGapBeforeMs = DashcamSegmentPolicy.gapBeforeMs(lastSegmentEndMs, recordingStartedAtMs)
                     scheduleStorageCheck(sessionId, config)
                     if (config.audio && audioAllowed(config)) scheduleAudioMonitor(sessionId, config)
                     publishStatus("recording", recordingStatus())
                     updateNotification(config)
                 }
             }
+            is VideoRecordEvent.Status -> {
+                if (DashcamSegmentPolicy.shouldRotate(event.recordingStats.recordedDurationNanos, config.segmentMinutes)) {
+                    rotateSegment(sessionId)
+                }
+            }
             is VideoRecordEvent.Finalize -> finalizeRecording(sessionId, config, file, event)
             else -> Unit
+        }
+    }
+
+    private fun rotateSegment(sessionId: String) {
+        if (!sessionPolicy.isRecording(sessionId) || recordingSessionId != sessionId || segmentRotationSessionId == sessionId) return
+        val activeRecording = recording ?: return
+        segmentRotationSessionId = sessionId
+        try {
+            activeRecording.stop()
+        } catch (e: Exception) {
+            segmentRotationSessionId = null
+            failSession(sessionId, e.message ?: getString(R.string.dashcam_camera_unavailable))
         }
     }
 
@@ -357,6 +385,10 @@ class DashcamService : LifecycleService() {
 
     private fun finalizeRecording(sessionId: String, config: DashcamServiceConfig, file: File, event: VideoRecordEvent.Finalize) {
         if (recordingSessionId != sessionId) return
+        val rotateSegment = segmentRotationSessionId == sessionId && sessionPolicy.isRecording(sessionId) && !event.hasError()
+        if (segmentRotationSessionId == sessionId) segmentRotationSessionId = null
+        val segmentStartedAtMs = recordingStartedAtMs
+        val gapBeforeMs = currentSegmentGapBeforeMs
         clearStorageCheck()
         clearAudioMonitor()
         videoOverlay?.stopLocationUpdates()
@@ -364,7 +396,7 @@ class DashcamService : LifecycleService() {
         recordingSessionId = null
         currentFile = null
 
-        val unexpectedEnd = !sessionPolicy.isFinalizing(sessionId)
+        val unexpectedEnd = !rotateSegment && !sessionPolicy.isFinalizing(sessionId)
         if (unexpectedEnd) {
             sessionPolicy.stop(sessionId)
             enqueueFinishTrip(sessionId, System.currentTimeMillis())
@@ -376,12 +408,12 @@ class DashcamService : LifecycleService() {
             val clip = if (info != null) {
                 val canPublishGalleryCopy = DashcamLibrary.enforceRetention(
                     this, config.retentionMode, config.retentionDays, config.maxBytes, config.reserveBytes,
-                    currentFile = file, currentRecordingStartedAtMs = recordingStartedAtMs,
+                    currentFile = file, currentRecordingStartedAtMs = segmentStartedAtMs,
                     currentGalleryCopyBytes = file.length()
                 ).canRecord
                 DashcamLibrary.addFinalizedClip(
-                    this, sessionId, file, recordingStartedAtMs, info.durationMs,
-                    info.width, info.height, recordingTargetFps, 0L, canPublishGalleryCopy
+                    this, sessionId, file, segmentStartedAtMs, info.durationMs,
+                    info.width, info.height, recordingTargetFps, gapBeforeMs, canPublishGalleryCopy
                 )
             } else {
                 file.delete()
@@ -391,14 +423,29 @@ class DashcamService : LifecycleService() {
                 this, config.retentionMode, config.retentionDays, config.maxBytes, config.reserveBytes,
                 protectedClipId = file.nameWithoutExtension
             )
-            RecordingResult(clip != null, event.hasError(), retention)
+            RecordingResult(clip != null, event.hasError(), retention, info?.let { segmentStartedAtMs + it.durationMs })
         }.let { saved ->
             serviceScope.launch {
                 val result = try {
                     saved.await()
                 } catch (e: Exception) {
-                    publishStatus("error", e.message ?: getString(R.string.dashcam_storage_full))
-                    finishTransition(sessionId, stopPending = true)
+                    val message = e.message ?: getString(R.string.dashcam_storage_full)
+                    if (sessionPolicy.isRecording(sessionId)) sessionPolicy.stop(sessionId)
+                    finishWithoutRecording(sessionId, message, stopPending = true)
+                    return@launch
+                }
+                if (rotateSegment && sessionPolicy.isRecording(sessionId)) {
+                    if (!result.retention.canRecord || !result.valid || result.recordingError || result.segmentEndAtMs == null) {
+                        val noSpace = !result.retention.canRecord
+                        val message = getString(if (noSpace) R.string.dashcam_storage_full else R.string.dashcam_camera_unavailable)
+                        publishStatus("error", message)
+                        if (sessionPolicy.stop(sessionId).stopSessionId != null) {
+                            finishWithoutRecording(sessionId, message, stopPending = noSpace)
+                        }
+                    } else {
+                        lastSegmentEndMs = result.segmentEndAtMs
+                        startRecording(sessionId, config)
+                    }
                     return@launch
                 }
                 if (!result.retention.canRecord) {
@@ -415,6 +462,7 @@ class DashcamService : LifecycleService() {
     }
 
     private fun finishTransition(sessionId: String, stopPending: Boolean) {
+        if (!sessionPolicy.isFinalizing(sessionId)) return
         if (stopPending) sessionPolicy.pendingSessionId?.let { pending ->
             sessionPolicy.stop(pending)
             configs.remove(pending)
@@ -434,13 +482,18 @@ class DashcamService : LifecycleService() {
         }
     }
 
-    private fun finishWithoutRecording(sessionId: String, error: String? = null, endTrip: Boolean = true) {
+    private fun finishWithoutRecording(
+        sessionId: String,
+        error: String? = null,
+        endTrip: Boolean = true,
+        stopPending: Boolean = false
+    ) {
         val finished = if (endTrip) enqueueFinishTrip(sessionId, System.currentTimeMillis()) else enqueueLibrary { Unit }
         serviceScope.launch {
             try { finished.await() } catch (_: Exception) { }
             if (!sessionPolicy.isFinalizing(sessionId)) return@launch
             if (!error.isNullOrBlank()) publishStatus("error", error)
-            finishTransition(sessionId, stopPending = false)
+            finishTransition(sessionId, stopPending)
         }
     }
 
@@ -625,7 +678,8 @@ class DashcamService : LifecycleService() {
     private data class RecordingResult(
         val valid: Boolean,
         val recordingError: Boolean,
-        val retention: DashcamRetentionResult
+        val retention: DashcamRetentionResult,
+        val segmentEndAtMs: Long?
     )
 
     companion object {

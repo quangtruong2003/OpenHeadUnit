@@ -11,6 +11,9 @@
     <string name="dashcam_camera">Camera</string>
     <string name="dashcam_quality">Resolution</string>
     <string name="dashcam_fps">Frame rate</string>
+    <string name="dashcam_segment_length">Clip length</string>
+    <string name="dashcam_segment_minutes">%1$d min</string>
+    <string name="dashcam_gap_unmeasured">gap not measured</string>
     <string name="dashcam_orientation">Video orientation</string>
     <string name="dashcam_audio">Record audio</string>
     <string name="dashcam_storage_policy">Storage policy</string>

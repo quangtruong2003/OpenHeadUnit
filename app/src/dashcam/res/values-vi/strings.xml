@@ -4,4 +4,7 @@
     <string name="dashcam_overlay_compact">Compact (mặc định)</string>
     <string name="dashcam_overlay_full">Đầy đủ</string>
     <string name="dashcam_overlay_hidden">Ẩn</string>
+    <string name="dashcam_segment_length">Độ dài mỗi đoạn</string>
+    <string name="dashcam_segment_minutes">%1$d phút</string>
+    <string name="dashcam_gap_unmeasured">khoảng hở chưa đo</string>
 </resources>

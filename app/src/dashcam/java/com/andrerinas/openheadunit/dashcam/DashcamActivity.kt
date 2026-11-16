@@ -200,6 +200,12 @@ class DashcamActivity : AppCompatActivity() {
         addValueRow(content, getString(R.string.dashcam_quality), qualityLabel(quality)) { showQualityChoices() }
         val fps = prefs.getInt(DashcamSettingsKeys.FPS, 30)
         addValueRow(content, getString(R.string.dashcam_fps), if (fps == 0) "Camera default" else "$fps fps") { showFpsChoices() }
+        val segmentMinutes = DashcamSegmentPolicy.normalizeMinutes(
+            prefs.getInt(DashcamSettingsKeys.SEGMENT_MINUTES, DashcamSettingsKeys.DEFAULT_SEGMENT_MINUTES)
+        )
+        addValueRow(content, getString(R.string.dashcam_segment_length), getString(R.string.dashcam_segment_minutes, segmentMinutes)) {
+            showSegmentLengthChoices()
+        }
         addValueRow(content, getString(R.string.dashcam_orientation), orientationLabel()) { showOrientationChoices() }
 
         val audioSwitch = SwitchCompat(this).apply {
@@ -232,7 +238,7 @@ class DashcamActivity : AppCompatActivity() {
             DashcamRetentionMode.SMART -> R.string.dashcam_smart_policy_help
             DashcamRetentionMode.COMBINED -> R.string.dashcam_combined_policy_help
         }))
-        addNote(content, "Camera, quality and storage changes apply to the next Android Auto trip.")
+        addNote(content, "Camera, quality, clip length and storage changes apply to the next Android Auto trip.")
 
         addSection(content, getString(R.string.dashcam_preview))
         addButton(content, getString(R.string.dashcam_preview)) {
@@ -309,7 +315,11 @@ class DashcamActivity : AppCompatActivity() {
             textSize = 15f
         }
         card.addView(title)
-        val gap = if (clip.gapBeforeMs > 0) " · gap ${clip.gapBeforeMs / 1000}s" else ""
+        val gap = when {
+            clip.gapBeforeMs > 0 -> " · gap ${clip.gapBeforeMs / 1000}s"
+            clip.gapBeforeMs == DashcamSegmentPolicy.UNKNOWN_GAP_MS -> " · ${getString(R.string.dashcam_gap_unmeasured)}"
+            else -> ""
+        }
         val eventTime = clip.eventSummaries.firstOrNull()?.let {
             " · event ${if (it.complete) "${it.durationMs / 1000}s" else "up to ${it.durationMs / 1000}s"}"
         }.orEmpty()
@@ -429,6 +439,23 @@ class DashcamActivity : AppCompatActivity() {
         val current = values.indexOf(prefs.getInt(DashcamSettingsKeys.FPS, 30)).coerceAtLeast(0)
         showChoiceDialog(getString(R.string.dashcam_fps), labels, current) { index ->
             prefs.edit().putInt(DashcamSettingsKeys.FPS, values[index]).apply()
+            renderSettings()
+        }
+    }
+
+    private fun showSegmentLengthChoices() {
+        val values = DashcamSegmentPolicy.ALLOWED_MINUTES
+        val current = values.indexOf(
+            DashcamSegmentPolicy.normalizeMinutes(
+                prefs.getInt(DashcamSettingsKeys.SEGMENT_MINUTES, DashcamSettingsKeys.DEFAULT_SEGMENT_MINUTES)
+            )
+        )
+        showChoiceDialog(
+            getString(R.string.dashcam_segment_length),
+            values.map { getString(R.string.dashcam_segment_minutes, it) },
+            current
+        ) { index ->
+            prefs.edit().putInt(DashcamSettingsKeys.SEGMENT_MINUTES, values[index]).apply()
             renderSettings()
         }
     }

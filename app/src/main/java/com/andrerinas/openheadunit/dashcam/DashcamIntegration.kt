@@ -23,6 +23,8 @@ object DashcamSettingsKeys {
     const val CAMERA_ID = "camera_id"
     const val QUALITY = "quality"
     const val FPS = "fps"
+    const val SEGMENT_MINUTES = "segment_minutes"
+    const val DEFAULT_SEGMENT_MINUTES = DashcamSegmentPolicy.DEFAULT_MINUTES
     const val ORIENTATION = "orientation"
     const val AUDIO = "audio"
     const val RETENTION_MODE = "retention_mode"
@@ -75,6 +77,7 @@ object DashcamActions {
     const val EXTRA_CAMERA_ID = "camera_id"
     const val EXTRA_QUALITY = "quality"
     const val EXTRA_FPS = "fps"
+    const val EXTRA_SEGMENT_MINUTES = "segment_minutes"
     const val EXTRA_ORIENTATION = "orientation"
     const val EXTRA_AUDIO = "audio"
     const val EXTRA_RETENTION_MODE = "retention_mode"
@@ -195,6 +198,7 @@ object DashcamIntegration {
             .putExtra(DashcamActions.EXTRA_CAMERA_ID, prefs.getString(DashcamSettingsKeys.CAMERA_ID, ""))
             .putExtra(DashcamActions.EXTRA_QUALITY, prefs.getString(DashcamSettingsKeys.QUALITY, "HD"))
             .putExtra(DashcamActions.EXTRA_FPS, prefs.getInt(DashcamSettingsKeys.FPS, 30))
+            .putExtra(DashcamActions.EXTRA_SEGMENT_MINUTES, prefs.getInt(DashcamSettingsKeys.SEGMENT_MINUTES, DashcamSettingsKeys.DEFAULT_SEGMENT_MINUTES))
             .putExtra(DashcamActions.EXTRA_ORIENTATION, prefs.getString(DashcamSettingsKeys.ORIENTATION, "auto"))
             .putExtra(DashcamActions.EXTRA_AUDIO, prefs.getBoolean(DashcamSettingsKeys.AUDIO, false))
             .putExtra(DashcamActions.EXTRA_RETENTION_MODE, prefs.getString(DashcamSettingsKeys.RETENTION_MODE, "COMBINED"))

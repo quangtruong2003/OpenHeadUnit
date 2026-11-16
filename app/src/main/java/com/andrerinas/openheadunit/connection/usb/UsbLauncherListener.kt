@@ -25,6 +25,10 @@ class UsbLauncherListener(private val manager: UsbLauncherManager) : UsbReceiver
     private val service = manager.service
 
     override fun onUsbAttach(device: UsbDevice) {
+        if (com.andrerinas.openheadunit.dashcam.DashcamSetupGate.shouldDeferAutomaticConnection(service)) {
+            AppLog.i("USB auto-connect deferred until Dashcam setup is complete")
+            return
+        }
         // Android raises its own dialog only now, so a later scan for this path knows it may be up.
         UsbPermissionAsks.stampAttach(device.deviceName)
         if (!UsbDeviceCompat.isConnectable(service, device)) {
@@ -86,6 +90,7 @@ class UsbLauncherListener(private val manager: UsbLauncherManager) : UsbReceiver
     }
 
     override fun onUsbAccessoryDetach() {
+        if (com.andrerinas.openheadunit.dashcam.DashcamSetupGate.shouldDeferAutomaticConnection(service)) return
         val commManager = App.provide(service).commManager
 
         AppLog.i("USB Accessory detached. This might be a transient state (e.g., 100% battery). Attempting to re-sync...")

@@ -132,7 +132,7 @@ class SettingsFragment : Fragment() {
     // Wireless items here only appear in Basic when the user connects wirelessly (see filterSettings).
     private val basicSettingIds = setOf(
         // General
-        "autoOptimize", "connectionMode", "appLanguage", "listenForUsbDevices",
+        "autoOptimize", "connectionMode", "appLanguage", "listenForUsbDevices", "dashcamSettings",
         // Wireless (shown in Basic only when WiFi is among the selected connection modes).
         // The hotspot entries come along with the transport choice: they only render once Hotspot
         // is picked, and on a device that will not let an app read its hotspot configuration the
@@ -878,6 +878,19 @@ class SettingsFragment : Fragment() {
                 onboardingLauncher.launch(Intent(requireContext(), OnboardingActivity::class.java))
             }
         ))
+
+        if (BuildConfig.FLAVOR == "dashcam") {
+            items.add(SettingItem.SettingEntry(
+                stableId = "dashcamSettings",
+                nameResId = R.string.dashcam_settings,
+                value = getString(R.string.dashcam_settings_summary),
+                onClick = {
+                    startActivity(Intent().setClassName(
+                        requireContext(), "com.andrerinas.openheadunit.dashcam.DashcamActivity"
+                    ))
+                }
+            ))
+        }
 
         // Permissions checklist (same list the setup wizard shows)
         items.add(SettingItem.SettingEntry(
@@ -2903,14 +2916,16 @@ class SettingsFragment : Fragment() {
             onClick = { /* Read only */ }
         ))
 
-        items.add(SettingItem.SettingEntry(
-            stableId = "check_for_updates",
-            nameResId = R.string.check_for_updates,
-            value = getString(R.string.check_for_updates_description),
-            onClick = {
-                handleCheckForUpdates()
-            }
-        ))
+        if (BuildConfig.FLAVOR != "dashcam") {
+            items.add(SettingItem.SettingEntry(
+                stableId = "check_for_updates",
+                nameResId = R.string.check_for_updates,
+                value = getString(R.string.check_for_updates_description),
+                onClick = {
+                    handleCheckForUpdates()
+                }
+            ))
+        }
 
         items.add(SettingItem.SettingEntry(
             stableId = "support",

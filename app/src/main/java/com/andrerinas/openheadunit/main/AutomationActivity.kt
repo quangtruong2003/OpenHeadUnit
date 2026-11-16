@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.andrerinas.openheadunit.App
+import com.andrerinas.openheadunit.dashcam.DashcamLinkPolicy
 import com.andrerinas.openheadunit.aap.AapProjectionActivity
 import com.andrerinas.openheadunit.automation.AutomationCommandPolicy
 import com.andrerinas.openheadunit.automation.AutomationEffectRunner
@@ -27,11 +28,14 @@ class AutomationActivity : AppCompatActivity() {
         window.setBackgroundDrawableResource(android.R.color.transparent)
 
         val data = intent.data
+        val isHeadUnitLink = DashcamLinkPolicy.accepts(
+            data?.scheme, com.andrerinas.openheadunit.BuildConfig.FLAVOR == "dashcam"
+        )
         AppLog.i("AutomationActivity: Received intent. Action: ${intent.action}, Data: $data")
 
-        val action = if (data?.scheme == "headunit") actionFor(data.host) else intent.action
+        val action = if (isHeadUnitLink) actionFor(data?.host) else intent.action
         if (action != null) {
-            runCommand(action, if (data?.scheme == "headunit") queryParameters(data) else emptyMap())
+            runCommand(action, if (isHeadUnitLink && data != null) queryParameters(data) else emptyMap())
         }
 
         finish()

@@ -15,6 +15,10 @@ import android.os.Build
 class AutoStartReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
+        if (com.andrerinas.openheadunit.dashcam.DashcamSetupGate.shouldDeferAutomaticConnection(context)) {
+            AppLog.i("AutoStartReceiver: skipping Bluetooth auto-start until Dashcam setup is complete")
+            return
+        }
         val action = intent.action
         // Use device-protected storage so the BT MACs are readable during locked boot
         val targetMacs = Settings.getAutoStartBtMacs(context)

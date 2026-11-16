@@ -16,6 +16,10 @@ class BootCompleteReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action
         if (action !in BOOT_ACTIONS) return
+        if (com.andrerinas.openheadunit.dashcam.DashcamSetupGate.shouldDeferAutomaticConnection(context)) {
+            AppLog.i("BootCompleteReceiver: waiting for Dashcam first-run setup before auto-start")
+            return
+        }
 
         AppLog.i("Boot auto-start: received action=$action")
 

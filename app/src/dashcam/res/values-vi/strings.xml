@@ -1,0 +1,7 @@
+<resources>
+    <string name="dashcam_overlay_section">Màn hình Android Auto</string>
+    <string name="dashcam_overlay_mode">Thông báo REC</string>
+    <string name="dashcam_overlay_compact">Compact (mặc định)</string>
+    <string name="dashcam_overlay_full">Đầy đủ</string>
+    <string name="dashcam_overlay_hidden">Ẩn</string>
+</resources>

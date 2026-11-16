@@ -15,6 +15,21 @@ class DashcamPolicyTest {
     }
 
     @Test
+    fun dashcamDeepLinksDoNotCollideWithTheOriginalApp() {
+        assertTrue(DashcamLinkPolicy.accepts("headunit", isDashcam = false))
+        assertFalse(DashcamLinkPolicy.accepts("headunit-dashcam", isDashcam = false))
+        assertTrue(DashcamLinkPolicy.accepts("headunit-dashcam", isDashcam = true))
+        assertFalse(DashcamLinkPolicy.accepts("headunit", isDashcam = true))
+    }
+
+    @Test
+    fun firstRunSetupDefersAutomaticConnectionOnlyForDashcam() {
+        assertTrue(DashcamSetupPolicy.shouldDeferAutomaticConnection(isDashcamBuild = true, setupComplete = false))
+        assertFalse(DashcamSetupPolicy.shouldDeferAutomaticConnection(isDashcamBuild = true, setupComplete = true))
+        assertFalse(DashcamSetupPolicy.shouldDeferAutomaticConnection(isDashcamBuild = false, setupComplete = false))
+    }
+
+    @Test
     fun oneProjectionStartsOnlyOneRecordingAndDisconnectFinalizesIt() {
         val policy = DashcamSessionPolicy()
 
@@ -33,16 +48,6 @@ class DashcamPolicyTest {
         assertTrue(policy.start("trip-b").isEmpty)
         assertEquals("trip-b", policy.finalized("trip-a").startSessionId)
         assertEquals("trip-b", policy.stop("trip-b").stopSessionId)
-    }
-
-    @Test
-    fun segmentRotationRestartsInsideTheSameTrip() {
-        val policy = DashcamSessionPolicy()
-        policy.start("trip-a")
-
-        assertEquals("trip-a", policy.rotate("trip-a").stopSessionId)
-        assertEquals("trip-a", policy.finalized("trip-a").startSessionId)
-        assertEquals("trip-a", policy.currentSessionId)
     }
 
     @Test

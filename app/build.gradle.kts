@@ -96,6 +96,8 @@ android {
         applicationId = "com.andrerinas.headunitrevived"
         minSdk = 16
         targetSdk = 36
+        manifestPlaceholders["headunitUriScheme"] = "headunit"
+        manifestPlaceholders["navigationUpdatePermission"] = "com.andrerinas.openheadunit.permission.NAVIGATION_UPDATE"
         versionCode = 123
         versionName = "4.0.0"
         setProperty("archivesBaseName", "${applicationId}_${versionName}")
@@ -125,6 +127,18 @@ android {
             dimension = "distribution"
             // Default minSdk 16 from defaultConfig is used
         }
+        create("dashcam") {
+            dimension = "distribution"
+            applicationId = "com.andrerinas.headunitrevived.dashcam"
+            minSdk = 24
+            manifestPlaceholders["headunitUriScheme"] = "headunit-dashcam"
+            manifestPlaceholders["navigationUpdatePermission"] = "${applicationId}.permission.NAVIGATION_UPDATE"
+        }
+    }
+
+    sourceSets.getByName("dashcam") {
+        java.srcDir("src/github/java")
+        res.srcDir("src/github/res")
     }
 
     testOptions {
@@ -252,6 +266,13 @@ dependencies {
     // Conscrypt (Flavor specific: 2.6.1 for Playstore 16KB alignment; 2.5.3 for Github minSdk 16)
     "playstoreImplementation"("org.conscrypt:conscrypt-android:2.6.1")
     "githubImplementation"("org.conscrypt:conscrypt-android:2.5.3")
+    "dashcamImplementation"("org.conscrypt:conscrypt-android:2.5.3")
+    "dashcamImplementation"("androidx.camera:camera-camera2:1.7.0-rc02")
+    "dashcamImplementation"("androidx.camera:camera-lifecycle:1.7.0-rc02")
+    "dashcamImplementation"("androidx.camera:camera-video:1.7.0-rc02")
+    "dashcamImplementation"("androidx.camera:camera-view:1.7.0-rc02")
+    "dashcamImplementation"("androidx.camera:camera-effects:1.7.0-rc02")
+    "dashcamImplementation"("androidx.lifecycle:lifecycle-service:2.6.2")
 
     implementation("com.google.protobuf:protobuf-java:3.25.5")
     implementation("androidx.activity:activity-ktx:1.8.2")

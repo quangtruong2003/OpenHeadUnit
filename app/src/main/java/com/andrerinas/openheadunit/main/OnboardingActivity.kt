@@ -949,6 +949,7 @@ class OnboardingActivity : BaseActivity() {
      */
     private fun completeOnboarding() {
         resolveLauncherRequest()
+        com.andrerinas.openheadunit.dashcam.DashcamSetupGate.markComplete(this)
         settings.hasAcceptedDisclaimer = true
         settings.hasCompletedSetupWizard = true
         settings.onboardingVersion = CURRENT_ONBOARDING_VERSION

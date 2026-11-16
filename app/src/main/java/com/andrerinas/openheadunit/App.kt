@@ -45,6 +45,7 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
 
     override fun onCreate() {
         super.onCreate()
+        if (isDashcamProcess()) return
         instance = this
         registerActivityLifecycleCallbacks(this)
 
@@ -128,6 +129,17 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
 
         // Register the main broadcast receiver safely for Android 14+ using ContextCompat
         ContextCompat.registerReceiver(this, AapBroadcastReceiver(), AapBroadcastReceiver.filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+    }
+
+    private fun isDashcamProcess(): Boolean = try {
+        val name = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            Application.getProcessName()
+        } else {
+            File("/proc/self/cmdline").readText().trimEnd('\u0000')
+        }
+        name.endsWith(":dashcam")
+    } catch (_: Exception) {
+        false
     }
 
     /**

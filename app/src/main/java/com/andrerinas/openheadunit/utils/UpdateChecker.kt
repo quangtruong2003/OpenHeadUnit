@@ -102,6 +102,9 @@ object UpdateChecker {
     }
 
     suspend fun check(context: Context): Result<UpdateInfo> = withContext(Dispatchers.IO) {
+        if (BuildConfig.FLAVOR == "dashcam") {
+            return@withContext Result.failure(IllegalStateException("Dashcam builds must not install upstream APKs"))
+        }
         try {
             val url = URL(GITHUB_RELEASES_API)
             val conn = (url.openConnection() as HttpURLConnection).apply {

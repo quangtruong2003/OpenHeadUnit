@@ -94,6 +94,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     private enum class OverlayState { STARTING, RECONNECTING, HIDDEN }
 
     private lateinit var projectionView: IProjectionView
+    private var dashcamProjectionOverlay: com.andrerinas.openheadunit.dashcam.DashcamProjectionOverlay? = null
     private val videoDecoder: VideoDecoder by lazy { App.provide(this).videoDecoder }
     private val settings: Settings by lazy { Settings(this) }
     private val cachedKeyCodes: Map<Int, Int> by lazy { settings.keyCodes }
@@ -1318,6 +1319,10 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         // Set up custom loading screen if configured
         setupCustomLoadingScreen()
 
+        dashcamProjectionOverlay = com.andrerinas.openheadunit.dashcam.DashcamProjectionOverlay(this, container).also {
+            it.attach()
+        }
+
         findViewById<Button>(R.id.disconnect_button)?.setOnClickListener {
             requestProjectionExit()
             finish()
@@ -1326,6 +1331,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         videoDecoder.onFirstFrameListener = {
             runOnUiThread {
                 hideLoadingOverlay(loadingOverlay)
+                dashcamProjectionOverlay?.bringToFront()
 
                 // The wizard changed the renderer: the picture is up, so ask the user to confirm it
                 // (issue #767). If they don't, the auto-offer above still catches a broken renderer.
@@ -2765,6 +2771,8 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     }
 
     override fun onDestroy() {
+        dashcamProjectionOverlay?.release()
+        dashcamProjectionOverlay = null
         clearTwoFingerTracking()
         // TextureView/GLES destruction can arrive after this activity removes its callback.
         // Stop our target now, while it is still valid, without touching a replacement owner.

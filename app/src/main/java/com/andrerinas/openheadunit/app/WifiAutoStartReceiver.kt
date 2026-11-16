@@ -40,6 +40,7 @@ class WifiAutoStartReceiver : BroadcastReceiver() {
 
     companion object {
         fun checkAndStart(context: Context) {
+            if (com.andrerinas.openheadunit.dashcam.DashcamSetupGate.shouldDeferAutomaticConnection(context)) return
             // Read settings from device-protected storage for maximum reliability
             if (!Settings.isAutoStartOnWifiEnabled(context)) return
             val targetSsid = Settings.getAutoStartWifiSsid(context).removeSurrounding("\"")

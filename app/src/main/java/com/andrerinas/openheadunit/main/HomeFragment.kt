@@ -312,13 +312,18 @@ class HomeFragment : Fragment() {
         mainViewModel.homePressed.observe(viewLifecycleOwner) { showFirstPage(animate = isResumed) }
 
         val appSettings = App.provide(requireContext()).settings
+        val dashcamSetupPending = com.andrerinas.openheadunit.dashcam.DashcamSetupGate.shouldDeferAutomaticConnection(requireContext())
 
-        if (appSettings.autoStartOnScreenOn || appSettings.autoStartOnBoot) {
+        if (!dashcamSetupPending && (appSettings.autoStartOnScreenOn || appSettings.autoStartOnBoot)) {
             ContextCompat.startForegroundService(requireContext(),
                 Intent(requireContext(), AapService::class.java))
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
+            if (dashcamSetupPending) {
+                AppLog.i("HomeFragment: Dashcam first-run setup pending; waiting for manual connection")
+                return@launch
+            }
             val isAutoConnectEnabled = appSettings.autoStartSelfMode ||
                 appSettings.autoConnectLastSession ||
                 appSettings.autoConnectSingleUsbDevice

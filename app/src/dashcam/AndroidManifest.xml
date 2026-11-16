@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <application android:label="@string/title">
+        <activity
+            android:name=".dashcam.DashcamActivity"
+            android:exported="false"
+            android:label="@string/dashcam_screen_title"
+            android:theme="@style/AppTheme" />
+
+        <service
+            android:name=".aap.DummyVpnService"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".dashcam.DashcamService"
+            android:exported="false"
+            android:foregroundServiceType="camera|microphone|location"
+            android:process=":dashcam"
+            android:stopWithTask="false" />
+    </application>
+</manifest>

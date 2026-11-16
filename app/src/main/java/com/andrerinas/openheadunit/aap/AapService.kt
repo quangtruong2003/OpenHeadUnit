@@ -1398,6 +1398,9 @@ class AapService : Service() {
                 }
                 refreshXyAutoMediaPolicy(state)
                 if (state === initialTerminal) return@collect
+                com.andrerinas.openheadunit.dashcam.DashcamIntegration.onConnectionState(
+                    this@AapService, state, commManager.projectionAttemptToken
+                )
                 // Activity can advance the handshake before this conflated collector sees
                 // Connected. Every observed live phase must retire obsolete Save launch work.
                 if (state is CommManager.ConnectionState.Connected ||
@@ -4060,6 +4063,10 @@ class AapService : Service() {
                 }
             }
             ACTION_BT_AUTO_START          -> {
+                if (com.andrerinas.openheadunit.dashcam.DashcamSetupGate.shouldDeferAutomaticConnection(this)) {
+                    AppLog.i("AapService: Bluetooth auto-start deferred until Dashcam setup is complete")
+                    return START_NOT_STICKY
+                }
                 // A Native mode stopped by a user exit stays dead unless something re-arms it, but
                 // a re-arm recreates the network and costs the phone its saved profile. So Native is
                 // forced only when it cannot accept at all. The rule is on BtAutoStartRearmPolicy;
@@ -4167,13 +4174,21 @@ class AapService : Service() {
                 // Caller already invoked commManager.connect(socket); the connectionState
                 // observer in observeConnectionState() handles the rest — nothing to do here.
             }
-            ACTION_CHECK_USB             -> usbLauncherManager.checkOnRequest(
-                userRequested = intent?.getBooleanExtra(EXTRA_USER_REQUESTED, false) == true,
-                trigger = if (intent?.getStringExtra(EXTRA_USB_TRIGGER) == USB_TRIGGER_PLUG_IN)
-                    UsbPlugInPolicy.Trigger.PLUG_IN else UsbPlugInPolicy.Trigger.APP_START,
-            )
+            ACTION_CHECK_USB             -> {
+                val userRequested = intent?.getBooleanExtra(EXTRA_USER_REQUESTED, false) == true
+                if (userRequested || !com.andrerinas.openheadunit.dashcam.DashcamSetupGate.shouldDeferAutomaticConnection(this)) {
+                    usbLauncherManager.checkOnRequest(
+                        userRequested = userRequested,
+                        trigger = if (intent?.getStringExtra(EXTRA_USB_TRIGGER) == USB_TRIGGER_PLUG_IN)
+                            UsbPlugInPolicy.Trigger.PLUG_IN else UsbPlugInPolicy.Trigger.APP_START,
+                    )
+                } else {
+                    AppLog.i("AapService: automatic USB connection deferred until Dashcam setup is complete")
+                }
+            }
             else                         -> {
-                if (intent?.action == null || intent.action == Intent.ACTION_MAIN) {
+                if ((intent?.action == null || intent.action == Intent.ACTION_MAIN) &&
+                    !com.andrerinas.openheadunit.dashcam.DashcamSetupGate.shouldDeferAutomaticConnection(this)) {
                     usbLauncherManager.checkAlreadyConnected()
                 }
             }

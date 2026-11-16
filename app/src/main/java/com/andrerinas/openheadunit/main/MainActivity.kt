@@ -31,6 +31,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.andrerinas.openheadunit.connection.ConnectionPriorityPolicy
 import com.andrerinas.openheadunit.App
+import com.andrerinas.openheadunit.dashcam.DashcamLinkPolicy
 import com.andrerinas.openheadunit.R
 import com.andrerinas.openheadunit.aap.AapProjectionActivity
 import com.andrerinas.openheadunit.aap.AapService
@@ -270,7 +271,11 @@ class MainActivity : BaseActivity() {
 
         if (launchSource == "USB auto-start") {
             findViewById<View>(R.id.splash_overlay)?.visibility = View.GONE
-            beginAutoConnect("USB auto-start", ConnectionUiMode.OVERLAY)
+            if (com.andrerinas.openheadunit.dashcam.DashcamSetupGate.shouldDeferAutomaticConnection(this)) {
+                AppLog.i("MainActivity: USB auto-connect deferred until Dashcam setup is complete")
+            } else {
+                beginAutoConnect("USB auto-start", ConnectionUiMode.OVERLAY)
+            }
         } else if (launchSource == LAUNCH_SOURCE_BLUETOOTH) {
             // The connect pill and the Self Mode launch are raised from handleLaunchIntent, so a
             // warm activity handed the same intent behaves the same way.
@@ -1189,6 +1194,9 @@ class MainActivity : BaseActivity() {
 
         val intentData = intent.data
         val intentAction = intent.action
+        val isHeadUnitLink = DashcamLinkPolicy.accepts(
+            intentData?.scheme, com.andrerinas.openheadunit.BuildConfig.FLAVOR == "dashcam"
+        )
 
         if (intentAction == "com.andrerinas.openheadunit.ACTION_EXIT") {
             AppLog.i("MainActivity: Received exit action")
@@ -1201,12 +1209,15 @@ class MainActivity : BaseActivity() {
         }
 
         if (intentAction == AapService.ACTION_START_SELF_MODE ||
-           (intentData?.scheme == "headunit" && intentData.host == "selfmode")) {
+           (isHeadUnitLink && intentData?.host == "selfmode")) {
             AppLog.i("MainActivity: Forced self-mode start requested")
             forceSelfModeLaunch()
         }
 
         if (intent.getStringExtra(EXTRA_LAUNCH_SOURCE) == LAUNCH_SOURCE_BLUETOOTH) {
+            if (com.andrerinas.openheadunit.dashcam.DashcamSetupGate.shouldDeferAutomaticConnection(this)) {
+                AppLog.i("MainActivity: Dashcam first-run setup is pending; ignoring Bluetooth auto-connect")
+            } else {
             // The service has already been told to arm wireless; this is the non-blocking pill
             // while it does, and the Self Mode launch, which only an activity can start because
             // HomeFragment owns the VPN consent and the projection needs a foreground window.
@@ -1230,10 +1241,11 @@ class MainActivity : BaseActivity() {
             } else {
                 AppLog.i("MainActivity: Bluetooth auto-start: leaving Self Mode alone")
             }
+            }
         }
 
         if (intent.action == Intent.ACTION_VIEW) {
-            if (intentData?.scheme == "headunit" && intentData.host == "connect") {
+            if (isHeadUnitLink && intentData?.host == "connect") {
                 val ip = intentData.getQueryParameter("ip")
                 if (!ip.isNullOrEmpty()) {
                     AppLog.i("Received connect intent for IP: $ip")
@@ -1249,13 +1261,13 @@ class MainActivity : BaseActivity() {
                     }
                     ContextCompat.startForegroundService(this, autoIntent)
                 }
-            } else if (intentData?.scheme == "headunit" && intentData.host == "disconnect") {
+            } else if (isHeadUnitLink && intentData?.host == "disconnect") {
                 AppLog.i("Received disconnect intent")
                 val stopIntent = Intent(this, AapService::class.java).apply {
                     action = AapService.ACTION_DISCONNECT
                 }
                 ContextCompat.startForegroundService(this, stopIntent)
-            } else if (intentData?.scheme == "headunit" && intentData.host == "exit") {
+            } else if (isHeadUnitLink && intentData?.host == "exit") {
                 AppLog.i("Received full exit intent via deep link")
                 val exitIntent = Intent(this, AapService::class.java).apply {
                     action = AapService.ACTION_STOP_SERVICE
@@ -1576,14 +1588,15 @@ class MainActivity : BaseActivity() {
         // Show the intelligent onboarding wizard once whenever the stored version is
         // older than the current one (covers fresh installs and upgraders alike).
         val wizardPending = appSettings.onboardingVersion < OnboardingActivity.CURRENT_ONBOARDING_VERSION
-        if (wizardPending && !OnboardingActivity.deferredThisSession) {
+        val dashcamSetupPending = com.andrerinas.openheadunit.dashcam.DashcamSetupGate.shouldDeferAutomaticConnection(this)
+        if ((wizardPending || dashcamSetupPending) && !OnboardingActivity.deferredThisSession) {
             // The wizard's permissions step handles runtime permissions, so don't also prompt here.
             // The wizard has a task of its own (see the manifest), so a Home intent that clears
             // this singleTask activity's task leaves it alive. NEW_TASK with the same plain intent
             // brings that task back as it was, at the step and screen the user left, instead of
             // starting a second wizard, however many times this runs.
             startActivity(Intent(this, OnboardingActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        } else if (!wizardPending) {
+        } else if (!wizardPending && !dashcamSetupPending) {
             // Onboarding already completed (e.g. upgraders): request runtime permissions directly.
             requestPermissions()
         }

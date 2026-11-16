@@ -5,6 +5,16 @@ object DashcamProjectionPolicy {
         enabled && projecting && cameraGranted
 }
 
+object DashcamSetupPolicy {
+    fun shouldDeferAutomaticConnection(isDashcamBuild: Boolean, setupComplete: Boolean): Boolean =
+        isDashcamBuild && !setupComplete
+}
+
+object DashcamLinkPolicy {
+    fun accepts(scheme: String?, isDashcam: Boolean): Boolean =
+        scheme == if (isDashcam) "headunit-dashcam" else "headunit"
+}
+
 data class DashcamSessionCommand(
     val stopSessionId: String? = null,
     val startSessionId: String? = null
@@ -37,14 +47,6 @@ class DashcamSessionPolicy {
         return DashcamSessionCommand(stopSessionId = sessionId)
     }
 
-    fun rotate(sessionId: String): DashcamSessionCommand {
-        if (currentSessionId != sessionId || finalizing) return DashcamSessionCommand()
-
-        pendingSessionId = sessionId
-        finalizing = true
-        return DashcamSessionCommand(stopSessionId = sessionId)
-    }
-
     fun finalized(sessionId: String): DashcamSessionCommand {
         if (currentSessionId != sessionId || !finalizing) return DashcamSessionCommand()
 
@@ -54,6 +56,7 @@ class DashcamSessionPolicy {
     }
 
     fun isRecording(sessionId: String): Boolean = currentSessionId == sessionId && !finalizing
+    fun isFinalizing(sessionId: String): Boolean = currentSessionId == sessionId && finalizing
 
     private fun startPending(): DashcamSessionCommand {
         val next = pendingSessionId ?: return DashcamSessionCommand()

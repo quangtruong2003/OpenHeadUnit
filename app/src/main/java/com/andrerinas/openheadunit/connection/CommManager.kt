@@ -241,6 +241,8 @@ class CommManager(
     // state changes must not reopen that decision while the same session is being retired.
     private var disconnectRequested = false
     private var connectionAttempt: Any? = null
+    internal val projectionAttemptToken: Any?
+        get() = synchronized(transportLifecycleLock) { connectionAttempt }
     // Guarded by transportLifecycleLock and reset for each physical connection attempt.
     private var physicalConnectionReached = false
     /** @Volatile: written on IO thread, read on Main and IO threads. */

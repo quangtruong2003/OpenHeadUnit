@@ -172,4 +172,30 @@ class DashcamPolicyTest {
         assertTrue(plan.deleteClipIds.isEmpty())
         assertTrue(plan.stopRecording)
     }
+
+    @Test
+    fun segmentLengthDefaultsToThreeMinutesAndAllowsOnlyOneThreeOrFive() {
+        assertEquals(listOf(1, 3, 5), DashcamSegmentPolicy.ALLOWED_MINUTES)
+        assertEquals(3, DashcamSegmentPolicy.normalizeMinutes(0))
+        assertEquals(3, DashcamSegmentPolicy.normalizeMinutes(2))
+        assertEquals(5, DashcamSegmentPolicy.normalizeMinutes(5))
+        assertEquals(60_000L, DashcamSegmentPolicy.durationMs(1))
+        assertEquals(180_000L, DashcamSegmentPolicy.durationMs(3))
+        assertEquals(300_000L, DashcamSegmentPolicy.durationMs(5))
+    }
+
+    @Test
+    fun segmentRotationUsesCameraXRecordedDurationThreshold() {
+        assertFalse(DashcamSegmentPolicy.shouldRotate(59_999_000_000L, 1))
+        assertTrue(DashcamSegmentPolicy.shouldRotate(60_000_000_000L, 1))
+        assertFalse(DashcamSegmentPolicy.shouldRotate(179_999_000_000L, 3))
+        assertTrue(DashcamSegmentPolicy.shouldRotate(180_000_000_000L, 3))
+    }
+
+    @Test
+    fun interSegmentGapIsMeasuredAndNeverNegative() {
+        assertEquals(0L, DashcamSegmentPolicy.gapBeforeMs(null, 10_000))
+        assertEquals(250L, DashcamSegmentPolicy.gapBeforeMs(10_000, 10_250))
+        assertEquals(0L, DashcamSegmentPolicy.gapBeforeMs(10_250, 10_000))
+    }
 }

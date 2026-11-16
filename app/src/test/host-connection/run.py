@@ -956,22 +956,22 @@ subprocess.run(["java","-cp",compiler,"org.jetbrains.kotlin.cli.jvm.K2JVMCompile
 subprocess.run(["java","-cp",str(OUT/"probe.jar")+os.pathsep+cp,"lifecycle.ProbeKt"],check=True,timeout=35)
 
 # Exercise real playback ownership as well when both independently mergeable changes are present.
-subprocess.run(["python3", str(Path(__file__).with_name("audio-integration.py"))], check=True)
+subprocess.run([sys.executable, str(Path(__file__).with_name("audio-integration.py"))], check=True)
 
 # Exercise actual Self launch jobs and the service cancel action on a queued Main dispatcher.
-subprocess.run(["python3", str(Path(__file__).with_name("self-launch.py"))], check=True)
+subprocess.run([sys.executable, str(Path(__file__).with_name("self-launch.py"))], check=True)
 
 # Full service disconnect callback: immediate policy and deferred resource ownership.
-subprocess.run(["python3", str(Path(__file__).with_name("wireless-cleanup.py"))], check=True)
+subprocess.run([sys.executable, str(Path(__file__).with_name("wireless-cleanup.py"))], check=True)
 
 # Service-owned HCT transport lifetime.
-subprocess.run(["python3", str(Path(__file__).with_name("hct-owner.py"))], check=True)
+subprocess.run([sys.executable, str(Path(__file__).with_name("hct-owner.py"))], check=True)
 
 # VPN startService delivery can outlive a synchronous stop on the bound instance.
-subprocess.run(["python3", str(Path(__file__).with_name("vpn-start.py"))], check=True)
+subprocess.run([sys.executable, str(Path(__file__).with_name("vpn-start.py"))], check=True)
 
 # Platform-version configuration: session exclusion must not silently become an all-app VPN.
-subprocess.run(["python3", str(Path(__file__).with_name("vpn-config.py"))], check=True)
+subprocess.run([sys.executable, str(Path(__file__).with_name("vpn-config.py"))], check=True)
 
 # Exercise the service module-retry branch with production wake and completion methods.
-subprocess.run(["python3", str(Path(__file__).with_name("module-retry.py"))], check=True)
+subprocess.run([sys.executable, str(Path(__file__).with_name("module-retry.py"))], check=True)

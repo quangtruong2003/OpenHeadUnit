@@ -58,6 +58,7 @@ class QueuedMain : MainCoroutineDispatcher(), Delay {
     fun awaitTask() { if (tasks.isEmpty()) advanceBy(checkNotNull(timers.minOfOrNull { it.at }) - now) }
 }
 class CommManager {
+    val projectionAttemptToken: Any = Any()
     val attemptUserRequested = false
     var isProjectionVideoFocusSuppressed = false
     val videoFocus = mutableListOf<com.andrerinas.openheadunit.aap.protocol.messages.VideoFocusEvent>()

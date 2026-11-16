@@ -141,6 +141,7 @@ private class ObserverFixture(
 
     ) {
         val connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected())
+        val projectionAttemptToken: Any = Any()
         private val transportLifecycleLock = Any()
         private val _connectionState get() = connectionState
         data class Config(val enabled: Boolean)

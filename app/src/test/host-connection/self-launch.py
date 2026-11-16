@@ -91,6 +91,7 @@ cp = os.pathsep.join(jars)
 # Share its production policy and recording doubles with the audio lifecycle fixture.
 scan_sources = [SRC / 'connection/wifi/scan/ScanControlPolicy.kt',
                 SRC / 'connection/wifi/modes/nativeaa/NativeStrategy.kt',
+                HERE / 'audio-stubs/Dashcam.kt',
                 HERE / 'audio-stubs/WifiLauncherNative.kt',
                 HERE / 'audio-stubs/WifiScanControl.kt',
                 HERE / 'audio-stubs/VideoFocusEvent.kt',

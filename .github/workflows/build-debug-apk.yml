@@ -3,6 +3,7 @@ name: Build Debug APK
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -55,3 +56,28 @@ jobs:
           name: open-headunit-dashcam-debug
           path: app/build/outputs/apk/dashcam/debug/*.apk
           if-no-files-found: error
+
+  release:
+    name: Publish APK release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download APK artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: open-headunit-*-debug
+          path: dist
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "${GITHUB_REF_NAME}"
+          --repo "${GITHUB_REPOSITORY}"
+          --title "Open Headunit ${GITHUB_REF_NAME}"
+          --notes "Automated debug APKs for the GitHub and Dashcam flavors (${GITHUB_REF_NAME})."
+          dist/*/*.apk

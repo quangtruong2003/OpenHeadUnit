@@ -12,7 +12,7 @@
 Open Headunit is an Android app that allows you to turn your Android tablet or phone into an Android Auto receiver. This project is a revived version of the original headunit project by the great Michael Reid. The original project can be found here:
 https://github.com/mikereidis/headunit
 
-It runs on Android 4.1 and newer (Android 5.0 and newer for the Play Store build). Besides the stores above, you can download APKs from the [Releases page](https://github.com/andreknieriem/open-headunit/releases).
+It runs on Android 4.1 and newer (Android 5.0 and newer for the Play Store build). Besides the stores above, you can download APKs from the [Releases page](https://github.com/quangtruong2003/OpenHeadUnit/releases).
 
 **Contents:** [How to use](#how-to-use) · [Known Issues](#known-issues) · [Planned](#planned) · [Changelog](#changelog) · [Contributing](#contributing)
 

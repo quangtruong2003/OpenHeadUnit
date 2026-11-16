@@ -98,8 +98,8 @@ android {
         targetSdk = 36
         manifestPlaceholders["headunitUriScheme"] = "headunit"
         manifestPlaceholders["navigationUpdatePermission"] = "com.andrerinas.openheadunit.permission.NAVIGATION_UPDATE"
-        versionCode = 123
-        versionName = "4.0.0"
+        versionCode = 124
+        versionName = "4.0.1"
         setProperty("archivesBaseName", "${applicationId}_${versionName}")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true
